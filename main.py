@@ -5,10 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-# ANN model with one hidden layer
-class ANNModel(nn.Module):
+class MLP(nn.Module):
     def __init__(self, input, neuron, output):
-        super(ANNModel, self).__init__()
+        super(MLP, self).__init__()
         # input layer to hidden layer
         self.fc1 = nn.Linear(input, neuron)
         # hidden to output layer
@@ -17,8 +16,8 @@ class ANNModel(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        # activation func for hidden layer
-        x = self.relu(self.fc1(x))
+        x = self.fc1(x)
+        x = self.relu(x)
         x = self.fc2(x)
         return x
 
@@ -50,11 +49,17 @@ target_tensors = torch.LongTensor(target)
 K = 10
 fold_size = len(feature_tensors) // K
 fold_results = []
-epochs = 500
+# hyperparameters
+epochs = 300
+input_layer = 6
+neurons_hidden = 64
+output_layer = 3
 
 # shuffle index
 indices = np.arange(len(feature_tensors))
 np.random.shuffle(indices)
+
+print()
 
 for fold in range(K):
     # prepare train and test indices
@@ -69,7 +74,7 @@ for fold in range(K):
     test_dataset = feature_tensors[test_indices]
     test_target_dataset = target_tensors[test_indices]
 
-    model = ANNModel(6, 32, 3)
+    model = MLP(input_layer, neurons_hidden, output_layer)
     # loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     # learning rate 0.1
@@ -93,8 +98,9 @@ for fold in range(K):
     with torch.no_grad():
         test_outputs = model(test_dataset)
         _, predicted_classes = torch.max(test_outputs.data, 1)
-        siz = len(test_target_dataset)
-        accuracy = (test_target_dataset == predicted_classes).sum().item() / siz
+        accuracy = (test_target_dataset == predicted_classes).sum().item() / len(
+            test_target_dataset
+        )
 
         print(f"Accuracy result on Fold {fold + 1}: {accuracy:.2f}")
         fold_results.append(accuracy)
@@ -102,6 +108,7 @@ for fold in range(K):
 
 average_accuracy = np.mean(fold_results)
 print(
-    f"\nAverage accuracy rate across {K} folds with 6 inputs, 32 neurons in hidden "
-    + f"layer, and 3 outputs in {epochs} epochs: {average_accuracy:.2f}\n"
+    f"\nAverage accuracy rate across {K} folds with {input_layer} inputs, "
+    + f"{neurons_hidden} neurons in hidden layer, and {output_layer} "
+    + f"outputs in {epochs} epochs: {average_accuracy:.2f}\n"
 )
